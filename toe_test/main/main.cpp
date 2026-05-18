@@ -27,42 +27,24 @@ extern "C" void app_main(void)
 
     printf("I2C Master initialized successfully.\n");
 
-    // 2. Initialize the VL53L0X Sensor
+    // 2. Initialize the VL53L0X Sensor using hard-coded calibration
     VL53L0X sensor(I2C_MASTER_NUM);
 
-    if (!sensor.init()) {
-        printf("Failed to initialize VL53L0X!\n");
+    // Paste the values you printed out here:
+    uint32_t cal_refSpadCount = 3;         // <-- Replace with your value
+    uint8_t cal_isApertureSpads = 0;       // <-- Replace with your value
+    uint8_t cal_VhvSettings = 31;           // <-- Replace with your value
+    uint8_t cal_PhaseCal = 1;              // <-- Replace with your value
+    int32_t cal_offsetMicroMeter = 30000;      // <-- Replace with your value
+    FixPoint1616_t cal_xTalk = 0;          // <-- Replace with your value
+
+    if (!sensor.fastInit(cal_refSpadCount, cal_isApertureSpads, cal_VhvSettings, 
+                         cal_PhaseCal, cal_offsetMicroMeter, cal_xTalk)) {
+        printf("Failed to quickly initialize VL53L0X!\n");
         vTaskDelay(portMAX_DELAY); 
     }
-    printf("VL53L0X initialized! Base setup complete.\n");
-
-    // ==========================================
-    // 3. CALIBRATION ROUTINE
-    // ==========================================
     
-    // -> Offset Calibration
-    printf("\n--- CALIBRATION PHASE ---\n");
-    printf("Place a target exactly 100mm from the sensor.\n");
-    printf("Starting Offset Calibration in 5 seconds...\n");
-    vTaskDelay(pdMS_TO_TICKS(5000));
-    
-    if (sensor.performOffsetCalibration(100)) {
-        printf("Offset Calibration Done.\n");
-    } else {
-        printf("Offset Calibration Failed.\n");
-    }
-
-    // -> Cross-Talk (XTalk) Calibration
-    printf("\nPlace a target exactly 400mm from the sensor.\n");
-    printf("Starting XTalk Calibration in 5 seconds...\n");
-    vTaskDelay(pdMS_TO_TICKS(5000));
-
-    if (sensor.performXTalkCalibration(400)) {
-        printf("XTalk Calibration Done.\n");
-    } else {
-        printf("XTalk Calibration Failed.\n");
-    }
-    printf("--- CALIBRATION COMPLETE ---\n\n");
+    printf("VL53L0X fast initialized and ready!\n");
 
     // ==========================================
     // 4. Ranging Loop

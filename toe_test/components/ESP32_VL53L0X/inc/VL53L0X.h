@@ -65,6 +65,68 @@ public:
     return true;
   }
 
+  bool fastInit(uint32_t refSpadCount, uint8_t isApertureSpads, 
+                uint8_t VhvSettings, uint8_t PhaseCal, 
+                int32_t offsetMicroMeter, FixPoint1616_t xTalkRateMegaCps) {
+    /* gpio init */
+    if (gpio_xshut != GPIO_NUM_MAX) {
+      gpio_set_direction(gpio_xshut, GPIO_MODE_OUTPUT);
+      gpio_set_level(gpio_xshut, 1);
+    }
+    
+    /* device init */
+    vl53l0x_dev.i2c_port_num = i2c_port;
+    vl53l0x_dev.i2c_address = VL53L0X_I2C_ADDRESS_DEFAULT;
+    reset();
+
+    // 1. Basic Data & Static Init
+    if (VL53L0X_DataInit(&vl53l0x_dev) != VL53L0X_ERROR_NONE) return false;
+    if (VL53L0X_StaticInit(&vl53l0x_dev) != VL53L0X_ERROR_NONE) return false;
+
+    // 2. Load Hard-Coded SPADs and Temperature (Replaces the slow 'Perform' functions)
+    VL53L0X_SetReferenceSpads(&vl53l0x_dev, refSpadCount, isApertureSpads);
+    VL53L0X_SetRefCalibration(&vl53l0x_dev, VhvSettings, PhaseCal);
+
+    // 3. Load Hard-Coded Offset and XTalk 
+    VL53L0X_SetOffsetCalibrationDataMicroMeter(&vl53l0x_dev, offsetMicroMeter);
+    VL53L0X_SetXTalkCompensationEnable(&vl53l0x_dev, 1);
+    VL53L0X_SetXTalkCompensationRateMegaCps(&vl53l0x_dev, xTalkRateMegaCps);
+
+    // 4. Final Setup
+    if (VL53L0X_ERROR_NONE !=
+        VL53L0X_SetGpioConfig(&vl53l0x_dev, 0,
+                              VL53L0X_DEVICEMODE_SINGLE_RANGING,
+                              VL53L0X_GPIOFUNCTIONALITY_NEW_MEASURE_READY,
+                              VL53L0X_INTERRUPTPOLARITY_LOW))
+      return false;
+      
+    if (!setTimingBudget(33000)) return false;
+
+    return true;
+  }
+
+  void printCalibrationData() {
+    uint32_t refSpadCount;
+    uint8_t isApertureSpads;
+    uint8_t VhvSettings, PhaseCal;
+    int32_t offsetMicroMeter;
+    FixPoint1616_t xTalkRateMegaCps;
+
+    VL53L0X_GetReferenceSpads(&vl53l0x_dev, &refSpadCount, &isApertureSpads);
+    VL53L0X_GetRefCalibration(&vl53l0x_dev, &VhvSettings, &PhaseCal);
+    VL53L0X_GetOffsetCalibrationDataMicroMeter(&vl53l0x_dev, &offsetMicroMeter);
+    VL53L0X_GetXTalkCompensationRateMegaCps(&vl53l0x_dev, &xTalkRateMegaCps);
+
+    printf("\n--- COPY THESE VALUES ---\n");
+    printf("uint32_t cal_refSpadCount = %lu;\n", refSpadCount);
+    printf("uint8_t cal_isApertureSpads = %d;\n", isApertureSpads);
+    printf("uint8_t cal_VhvSettings = %d;\n", VhvSettings);
+    printf("uint8_t cal_PhaseCal = %d;\n", PhaseCal);
+    printf("int32_t cal_offsetMicroMeter = %ld;\n", offsetMicroMeter);
+    printf("FixPoint1616_t cal_xTalk = %ld;\n", xTalkRateMegaCps);
+    printf("-------------------------\n\n");
+  }
+
   bool performOffsetCalibration(uint32_t target_distance_mm) {
     int32_t offsetMicroMeter = 0;
     // The API expects distance as FixPoint1616_t (shifted by 16 bits)

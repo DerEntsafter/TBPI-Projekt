@@ -3,7 +3,7 @@
   "idf.openOcdConfigs": [
     "board/esp32c6-ftdi.cfg"
   ],
-  "idf.portWin": "COM4",
+  "idf.portWin": "COM6",
   "idf.currentSetup": "C:\\esp\\v6.0.1\\esp-idf",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c6"
@@ -18,5 +18,5 @@
   "idf.espIdfPathWin": "c:\\esp\\v6.0\\esp-idf",
   "idf.toolsPathWin": "c:\\esp\\v6.0\\esp-idf\\tools",
   "idf.pythonInstallPath": "c:\\esp\\v6.0\\esp-idf\\tools\\tools\\idf-python\\3.11.2\\python.exe",
-  "idf.monitorPort": "COM4"
+  "idf.monitorPort": "COM6"
 }
