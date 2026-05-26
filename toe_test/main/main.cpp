@@ -9,6 +9,10 @@
 #define I2C_MASTER_SCL_IO           7
 #define I2C_MASTER_NUM              I2C_NUM_0 
 #define I2C_MASTER_FREQ_HZ          400000 
+#define TOF_XSHUT                   8
+
+//Forward declaration: tell the compiler this function exists lower down
+void mess_avg(VL53L0X& sensor, int num_measurements, int interval_ms);
 
 extern "C" void app_main(void)
 {
@@ -35,7 +39,7 @@ extern "C" void app_main(void)
     uint8_t cal_isApertureSpads = 0;       // <-- Replace with your value
     uint8_t cal_VhvSettings = 31;           // <-- Replace with your value
     uint8_t cal_PhaseCal = 1;              // <-- Replace with your value
-    int32_t cal_offsetMicroMeter = 30000;      // <-- Replace with your value
+    int32_t cal_offsetMicroMeter = 20000;      // <-- Replace with your value
     FixPoint1616_t cal_xTalk = 0;          // <-- Replace with your value
 
     if (!sensor.fastInit(cal_refSpadCount, cal_isApertureSpads, cal_VhvSettings, 
@@ -50,16 +54,38 @@ extern "C" void app_main(void)
     // 4. Ranging Loop
     // ==========================================
     while (1) {
+        mess_avg(sensor, 10, 50);       
+
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Delay between reads
+    }
+}
+
+void mess_avg(VL53L0X& sensor, int num_measurements, int interval_ms) {
+    uint32_t total_distance = 0;
+    int successful_reads = 0;
+
+    for (int i = 0; i < num_measurements; i++) {
         uint16_t distance_mm = 0;
         
+        // Use the passed sensor reference to read
         bool success = sensor.read(&distance_mm);
         
         if (success) {
-            printf("Distance: %d mm\n", distance_mm);
+            total_distance += distance_mm;
+            successful_reads++;
         } else {
-            printf("Measurement failed or out of range.\n");
+            printf("  Reading %d failed or out of range.\n", i + 1);
         }
+        
+        // Wait for the specified interval before the next measurement
+        vTaskDelay(pdMS_TO_TICKS(interval_ms)); 
+    }
 
-        vTaskDelay(pdMS_TO_TICKS(100)); // Delay between reads
+    // Calculate and print the average if we had at least one good reading
+    if (successful_reads > 0) {
+        uint32_t average = total_distance / successful_reads;
+        printf("--> Average Distance: %lu mm (from %d successful reads)\n\n", average, successful_reads);
+    } else {
+        printf("--> All measurements failed in this batch.\n\n");
     }
 }
