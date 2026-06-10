@@ -72,12 +72,13 @@ public:
     if (gpio_xshut != GPIO_NUM_MAX) {
       gpio_set_direction(gpio_xshut, GPIO_MODE_OUTPUT);
       gpio_set_level(gpio_xshut, 1);
+      vTaskDelay(pdMS_TO_TICKS(2)); // Wait 2ms for Firmware Boot Docu says 1.2
     }
     
     /* device init */
     vl53l0x_dev.i2c_port_num = i2c_port;
     vl53l0x_dev.i2c_address = VL53L0X_I2C_ADDRESS_DEFAULT;
-    reset();
+    // reset();
 
     // 1. Basic Data & Static Init
     if (VL53L0X_DataInit(&vl53l0x_dev) != VL53L0X_ERROR_NONE) return false;
@@ -104,6 +105,13 @@ public:
 
     return true;
   }
+
+  void powerOff() {
+      if (gpio_xshut != GPIO_NUM_MAX) {
+        gpio_set_direction(gpio_xshut, GPIO_MODE_OUTPUT);
+        gpio_set_level(gpio_xshut, 0); // Pulls XSHUT low (Hardware Standby)
+      }
+    }
 
   void printCalibrationData() {
     uint32_t refSpadCount;
